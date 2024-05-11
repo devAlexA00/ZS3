@@ -93,7 +93,7 @@ class Trainer:
         if args.cuda:
             self.model = torch.nn.DataParallel(self.model, device_ids=self.args.gpu_ids)
             patch_replication_callback(self.model)
-            self.model = self.model.cuda()
+            self.model = self.model.to(torch.device("mps"))
 
         # Resuming checkpoint
         self.best_pred = 0.0
@@ -143,7 +143,7 @@ class Trainer:
         for i, sample in enumerate(tbar):
             image, target = sample["image"], sample["label"]
             if self.args.cuda:
-                image, target = image.cuda(), target.cuda()
+                image, target = image.to(torch.device("mps")), target.to(torch.device("mps"))
             with torch.no_grad():
                 if args.nonlinear_last_layer:
                     output = self.model(image, image.size()[2:])
@@ -334,14 +334,14 @@ def main():
     )
 
     args = parser.parse_args()
-    args.cuda = not args.no_cuda and torch.cuda.is_available()
-    if args.cuda:
-        try:
-            args.gpu_ids = [int(s) for s in args.gpu_ids.split(",")]
-        except ValueError:
-            raise ValueError(
-                "Argument --gpu_ids must be a comma-separated list of integers only"
-            )
+    args.cuda = not args.no_cuda
+    # if args.cuda:
+    #     try:
+    #         args.gpu_ids = [int(s) for s in args.gpu_ids.split(",")]
+    #     except ValueError:
+    #         raise ValueError(
+    #             "Argument --gpu_ids must be a comma-separated list of integers only"
+    #         )
 
     args.sync_bn = args.cuda and len(args.gpu_ids) > 1
 

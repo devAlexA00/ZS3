@@ -37,7 +37,7 @@ class TensorboardSummary:
             ),
             nb_image,
             normalize=False,
-            range=(0, 255),
+            value_range=(0, 255),
         )
         writer.add_image(name + "_Predicted label", grid_image, global_step)
         grid_image = make_grid(
@@ -47,7 +47,7 @@ class TensorboardSummary:
             ),
             nb_image,
             normalize=False,
-            range=(0, 255),
+            value_range=(0, 255),
         )
         writer.add_image(name + "_Groundtruth label", grid_image, global_step)
 
@@ -70,7 +70,7 @@ class TensorboardSummary:
             ),
             nb_image,
             normalize=False,
-            range=(0, 255),
+            value_range=(0, 255),
         )
         writer.add_image(name + "_Predicted label", grid_image, global_step)
         grid_image = make_grid(
@@ -79,6 +79,6 @@ class TensorboardSummary:
             ),
             nb_image,
             normalize=False,
-            range=(0, 255),
+            value_range=(0, 255),
         )
         writer.add_image(name + "_Groundtruth label", grid_image, global_step)

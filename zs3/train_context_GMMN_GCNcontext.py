@@ -165,7 +165,7 @@ class Trainer:
         class_weight = torch.ones(self.nclass)
         class_weight[args.unseen_classes_idx_metric] = args.unseen_weight
         if args.cuda:
-            class_weight = class_weight.cuda()
+            class_weight = class_weight.to(torch.device("mps"))
 
         self.criterion = SegmentationLosses(
             weight=class_weight, cuda=args.cuda
@@ -196,9 +196,9 @@ class Trainer:
         if args.cuda:
             self.model = torch.nn.DataParallel(self.model, device_ids=self.args.gpu_ids)
             patch_replication_callback(self.model)
-            self.model = self.model.cuda()
-            self.generator = self.generator.cuda()
-            self.generator_GCN = self.generator_GCN.cuda()
+            self.model = self.model.to(torch.device("mps"))
+            self.generator = self.generator.to(torch.device("mps"))
+            self.generator_GCN = self.generator_GCN.to(torch.device("mps"))
 
         # Resuming checkpoint
         self.best_pred = 0.0
@@ -250,9 +250,9 @@ class Trainer:
                 )
                 if self.args.cuda:
                     image, target, embedding = (
-                        image.cuda(),
-                        target.cuda(),
-                        embedding.cuda(),
+                        image.to(torch.device("mps")),
+                        target.to(torch.device("mps")),
+                        embedding.to(torch.device("mps")),
                     )
                 self.scheduler(self.optimizer, i, epoch, self.best_pred)
                 # ===================real feature extraction=====================
@@ -264,7 +264,7 @@ class Trainer:
                 # ===================fake feature generation=====================
                 fake_features = torch.zeros(real_features.shape)
                 if args.cuda:
-                    fake_features = fake_features.cuda()
+                    fake_features = fake_features.to(torch.device("mps"))
                 generator_loss_batch = 0.0
                 generator_GCN_loss_batch = 0.0
                 semantic_reconstruction_batch = 0.0
@@ -332,7 +332,7 @@ class Trainer:
 
                     fake_features_i = torch.zeros(real_features_i.shape)
                     if args.cuda:
-                        fake_features_i = fake_features_i.cuda()
+                        fake_features_i = fake_features_i.to(torch.device("mps"))
 
                     # normal generator
                     for idx_in in unique_class:
@@ -350,7 +350,7 @@ class Trainer:
                                 z = torch.rand((embedding_class.shape[0], args.noise_dim))
 
                             if args.cuda:
-                                z = z.cuda()
+                                z = z.to(torch.device("mps"))
 
                             fake_features_class = self.generator(
                                 embedding_class, z.float()
@@ -400,16 +400,16 @@ class Trainer:
                     # GCN generator
                     if adj_mat is not None:
                         self.optimizer_generator_GCN.zero_grad()
-                        embedding_GCN_i_pt = torch.FloatTensor(embedding_GCN_i).cuda()
+                        embedding_GCN_i_pt = torch.FloatTensor(embedding_GCN_i).to(torch.device("mps"))
                         z_GCN = torch.rand((embedding_GCN_i.shape[0], args.noise_dim))
                         if args.cuda:
-                            z_GCN = z_GCN.cuda()
+                            z_GCN = z_GCN.to(torch.device("mps"))
                         fake_features_GCN_i = self.generator_GCN(
-                            embedding_GCN_i_pt, z_GCN.float(), adj_mat.cuda()
+                            embedding_GCN_i_pt, z_GCN.float(), adj_mat.to(torch.device("mps"))
                         )
                         real_features_GCN_i = torch.FloatTensor(
                             real_features_GCN_i
-                        ).cuda()
+                        ).to(torch.device("mps"))
                         if not has_unseen_class:
                             g_GCN_loss = self.criterion_generator(
                                 fake_features_GCN_i, real_features_GCN_i
@@ -440,14 +440,14 @@ class Trainer:
                     fake_features_GCN = np.vstack(fake_features_GCN).transpose(1, 0)
                     fake_features_GCN_pt = torch.unsqueeze(
                         torch.unsqueeze(torch.FloatTensor(fake_features_GCN), 2), 0
-                    ).cuda()
+                    ).to(torch.device("mps"))
                     output_GCN = self.model.module.decoder.forward_class_prediction(
                         fake_features_GCN_pt
                     )
                     target_GCN_pt = torch.unsqueeze(
                         torch.unsqueeze(torch.FloatTensor(np.array(target_GCN)), 1),
                         0,
-                    ).cuda()
+                    ).to(torch.device("mps"))
                     loss_GCN = args.GCN_weight * self.criterion(
                         output_GCN, target_GCN_pt
                     )
@@ -531,7 +531,7 @@ class Trainer:
                 sample["label_emb"],
             )
             if self.args.cuda:
-                image, target = image.cuda(), target.cuda()
+                image, target = image.to(torch.device("mps")), target.to(torch.device("mps"))
             with torch.no_grad():
                 if args.nonlinear_last_layer:
                     output = self.model(image, image.size()[2:])
@@ -821,14 +821,14 @@ def main():
     )
 
     args = parser.parse_args()
-    args.cuda = not args.no_cuda and torch.cuda.is_available()
-    if args.cuda:
-        try:
-            args.gpu_ids = [int(s) for s in args.gpu_ids.split(",")]
-        except ValueError:
-            raise ValueError(
-                "Argument --gpu_ids must be a comma-separated list of integers only"
-            )
+    args.cuda = not args.no_cuda
+    # if args.cuda:
+    #     try:
+    #         args.gpu_ids = [int(s) for s in args.gpu_ids.split(",")]
+    #     except ValueError:
+    #         raise ValueError(
+    #             "Argument --gpu_ids must be a comma-separated list of integers only"
+    #         )
 
     args.sync_bn = args.cuda and len(args.gpu_ids) > 1
 

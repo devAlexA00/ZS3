@@ -213,7 +213,7 @@ class ResNet(nn.Module):
         pretrain_dict = model_zoo.load_url('https://download.pytorch.org/models/resnet101-5d3b4d8f.pth')
         """
 
-        pretrain_dict = torch.load(imagenet_pretrained_path)["state_dict"]
+        pretrain_dict = torch.load(imagenet_pretrained_path, map_location=torch.device('cpu'))["state_dict"]
         model_dict = {}
         state_dict = self.state_dict()
         for k, v in pretrain_dict.items():

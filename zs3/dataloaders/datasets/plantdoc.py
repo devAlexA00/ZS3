@@ -11,25 +11,25 @@ from zs3.dataloaders import custom_transforms as tr
 from .base import BaseDataset, lbl_contains_unseen
 
 
-CONTEXT_DIR = pathlib.Path("./data/context/")
+PLANTDOC_DIR = pathlib.Path("./data/plantdoc/")
 
 
-class ContextSegmentation(BaseDataset):
+class PlantDocSegmentation(BaseDataset):
     """
-    PascalVoc dataset
+    Plantdoc dataset
     """
 
-    NUM_CLASSES = 60
+    NUM_CLASSES = 3
 
     def __init__(
         self,
         args,
-        base_dir=CONTEXT_DIR,
+        base_dir=PLANTDOC_DIR,
         split="train",
         load_embedding=None,
         w2c_size=300,
         weak_label=False,
-        unseen_classes_idx_weak=[],
+        unseen_classes_idx_weak=1,
         transform=True,
     ):
         """
@@ -48,56 +48,31 @@ class ContextSegmentation(BaseDataset):
             transform,
         )
 
-        self._image_dir = self._base_dir / "VOCdevkit/VOC2010/JPEGImages"
+        self._image_dir = self._base_dir / "train/images"
         #print("PATH :", self._image_dir)
-        self._cat_dir = self._base_dir / "full_annotations/trainval"
+        self._cat_dir = self._base_dir / "train/masks"
 
         self.unseen_classes_idx_weak = unseen_classes_idx_weak
 
+        _splits_dir = self._base_dir
 
         self.im_ids = []
         self.categories = []
 
-        self.labels_459 = [
-            label.replace(" ", "")
-            for idx, label in np.genfromtxt(
-                osp.join(self._base_dir, "full_annotations/labels.txt"),
-                delimiter=":",
-                dtype=str
-            )
-        ]
-        #print("LABELS 459 :", self.labels_459)
-        self.labels_59 = [
-            label.replace(" ", "")
-            for idx, label in np.genfromtxt(
-                osp.join(self._base_dir, "classes-59.txt"), delimiter=":", dtype=str
-            )
-        ]
-        #print("LABELS 59 :", self.labels_59)
-        #print(self.labels_59[self.labels_59.index(task_label)])
-        self.labels_59[self.labels_59.index("diningtable")] = "table"
-        #print(self.labels_59[self.labels_59.index(main_label)], main_label)
-
-        self.idx_59_to_idx_469 = {}
-        for idx, l in enumerate(self.labels_59):
-            if idx > 0:
-                self.idx_59_to_idx_469[idx] = self.labels_459.index(l) + 1
-
-        lines = (self._base_dir / f"{self.split}.txt").read_text().splitlines()
+        lines = (_splits_dir / f"{self.split}.txt").read_text().splitlines()
 
         for ii, line in enumerate(lines):
-            _image = self._image_dir / f'{line}.jpg'
-            _cat = self._cat_dir / f"{line}.mat"
-            #print("IMAGE :", _image)
-            #print("CAT :", _cat)
-            assert _image.is_file()
-            assert _cat.is_file()
+            _image = self._image_dir / f"{line}.jpg"
+            _cat = self._cat_dir / f"{line}.png"
+            assert _image.is_file(), _image
+            assert _cat.is_file(), _cat
 
             # if unseen classes and training split
-            #if len(args.unseen_classes_idx) > 0:
-            cat = self.load_label(_cat)
-            if lbl_contains_unseen(cat, args.unseen_classes_idx):
-                continue
+            if self.split == "train":
+                cat = Image.open(_cat)
+                cat = np.array(cat, dtype=np.uint8)
+                if lbl_contains_unseen(cat, args.unseen_classes_idx):
+                    continue
 
             self.im_ids.append(line)
             self.images.append(_image)
@@ -106,28 +81,11 @@ class ContextSegmentation(BaseDataset):
         assert len(self.images) == len(self.categories)
 
         # Display stats
-        print(
-            "(pascal) Number of images in {}: {:d}, {:d} deleted".format(
-                split, len(self.images), len(lines) - len(self.images)
-            )
-        )
-
-    def load_label(self, file_path):
-        """
-        Load label image as 1 x height x width integer array of label indices.
-        The leading singleton dimension is required by the loss.
-        The full 459 labels are translated to the 59 class task labels.
-        """
-        label_459 = scipy.io.loadmat(file_path)["LabelMap"]
-        label = np.zeros_like(label_459, dtype=np.uint8)
-        for idx, l in enumerate(self.labels_59):
-            if idx > 0:
-                label[label_459 == self.idx_59_to_idx_469[idx]] = idx
-        return label
+        print(f"(pascal) Number of images in {split}: {len(self.images):d}")
 
     def init_embeddings(self):
         if self.load_embedding == "my_w2c":
-            embed_arr = np.load("/Users/alex/Documents/GitHub/ZS3/zs3/embeddings/context/pascalcontext_class_w2c.npy")
+            embed_arr = np.load("/Users/alex/Documents/GitHub/ZS3/zs3/embeddings/plantdoc/plantdoc_class_w2c.npy")
         else:
             raise KeyError(self.load_embedding)
         self.make_embeddings(embed_arr)
@@ -143,7 +101,7 @@ class ContextSegmentation(BaseDataset):
                     has_unseen_class = True
             if has_unseen_class:
                 _target = Image.open(
-                    "weak_label_context_10_unseen_top_by_image_75.0/pascal/"
+                    "/Users/alex/Documents/GitHub/ZS3/data/plantdoc/train/masks"
                     + self.categories[index].stem
                     + ".jpg"
                 )
@@ -165,8 +123,7 @@ class ContextSegmentation(BaseDataset):
 
     def _make_img_gt_point_pair(self, index):
         _img = Image.open(self.images[index]).convert("RGB")
-        _target = self.load_label(self.categories[index])
-        _target = Image.fromarray(_target)
+        _target = Image.open(self.categories[index])
         return _img, _target
 
     def transform_tr(self, sample):
@@ -183,11 +140,9 @@ class ContextSegmentation(BaseDataset):
                 tr.ToTensor(),
             ]
         )
-
         return composed_transforms(sample)
 
     def transform_val(self, sample):
-
         composed_transforms = transforms.Compose(
             [
                 tr.FixScale(crop_size=self.args.crop_size),
@@ -195,7 +150,6 @@ class ContextSegmentation(BaseDataset):
                 tr.ToTensor(),
             ]
         )
-
         return composed_transforms(sample)
 
     def transform_weak(self, sample):
@@ -210,4 +164,4 @@ class ContextSegmentation(BaseDataset):
         return composed_transforms(sample)
 
     def __str__(self):
-        return f"VOC2010(split={self.split})"
+        return f"PLANTDOC(split={self.split})"

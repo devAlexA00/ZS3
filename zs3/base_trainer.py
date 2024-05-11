@@ -1,3 +1,4 @@
+import torch
 from tqdm import tqdm
 
 
@@ -11,7 +12,7 @@ class BaseTrainer:
             if len(sample["image"]) > 1:
                 image, target = sample["image"], sample["label"]
                 if self.args.cuda:
-                    image, target = image.cuda(), target.cuda()
+                    image, target = image.to(torch.device("mps")), target.to(torch.device("mps"))
                 self.scheduler(self.optimizer, i, epoch, self.best_pred)
                 self.optimizer.zero_grad()
                 output = self.model(image)

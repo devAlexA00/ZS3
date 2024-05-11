@@ -1,6 +1,6 @@
 from torch.utils.data import DataLoader
 
-from zs3.dataloaders.datasets import combine_dbs, pascal, sbd, context
+from zs3.dataloaders.datasets import combine_dbs, pascal, sbd, context, plantdoc
 
 
 def make_data_loader(
@@ -49,6 +49,28 @@ def make_data_loader(
 
     elif args.dataset == "context":
         train_set = context.ContextSegmentation(
+            args,
+            transform=transform,
+            split="train",
+            load_embedding=load_embedding,
+            w2c_size=w2c_size,
+            weak_label=weak_label,
+            unseen_classes_idx_weak=unseen_classes_idx_weak,
+        )
+        val_set = context.ContextSegmentation(
+            args, split="val", load_embedding=load_embedding, w2c_size=w2c_size
+        )
+        num_class = train_set.NUM_CLASSES
+        train_loader = DataLoader(
+            train_set, batch_size=args.batch_size, shuffle=True, **kwargs
+        )
+        val_loader = DataLoader(
+            val_set, batch_size=args.test_batch_size, shuffle=False, **kwargs
+        )
+        test_loader = None
+        return train_loader, val_loader, test_loader, num_class
+    elif args.dataset == "plantdoc":
+        train_set = plantdoc.PlantDocSegmentation(
             args,
             transform=transform,
             split="train",

@@ -15,7 +15,7 @@ from zs3.utils.metrics import Evaluator
 from zs3.utils.saver import Saver
 from zs3.utils.summaries import TensorboardSummary
 from zs3.parsing import get_parser
-from zs3.exp_data import CLASSES_NAMES
+from zs3.exp_data_plantdoc import CLASSES_NAMES_PLANTDOC
 from zs3.base_trainer import BaseTrainer
 
 
@@ -80,13 +80,14 @@ class Trainer(BaseTrainer):
         self.model, self.optimizer = model, optimizer
 
         # Define Evaluator
-        self.evaluator = Evaluator(self.nclass)
+        self.evaluator = Evaluator(self.nclass, [x for x in range(self.nclass) if x != args.unseen_classes_idx], [args.unseen_classes_idx])
         # Define lr scheduler
         self.scheduler = LR_Scheduler(
             args.lr_scheduler, args.lr, args.epochs, len(self.train_loader)
         )
 
         # Using cuda
+        #print("CUDA =", args.cuda)
         if args.cuda:
             self.model = torch.nn.DataParallel(self.model, device_ids=self.args.gpu_ids)
             patch_replication_callback(self.model)
@@ -113,7 +114,6 @@ class Trainer(BaseTrainer):
             args.start_epoch = 0
 
     def validation(self, epoch):
-        class_names = CLASSES_NAMES[:21]
         self.model.eval()
         self.evaluator.reset()
         tbar = tqdm(self.val_loader, desc="\r")
@@ -152,11 +152,11 @@ class Trainer(BaseTrainer):
         print(f"Loss: {test_loss:.3f}")
 
         for i, (class_name, acc_value, mIoU_value) in enumerate(
-            zip(class_names, Acc_class_by_class, mIoU_by_class)
+            zip(CLASSES_NAMES_PLANTDOC, Acc_class_by_class, mIoU_by_class)
         ):
             self.writer.add_scalar("Acc_by_class/" + class_name, acc_value, epoch)
             self.writer.add_scalar("mIoU_by_class/" + class_name, mIoU_value, epoch)
-            print(class_names[i], "- acc:", acc_value, " mIoU:", mIoU_value)
+            print(CLASSES_NAMES_PLANTDOC[i], "- acc:", acc_value, " mIoU:", mIoU_value)
 
         new_pred = mIoU
         is_best = True
@@ -189,17 +189,11 @@ def main():
     parser.add_argument(
         "--dataset",
         type=str,
-        default="pascal",
-        choices=["pascal", "coco", "cityscapes"],
-        help="dataset name (default: pascal)",
+        default="plantdoc",
+        choices=["pascal", "coco", "cityscapes", "context", "plantdoc"],
+        help="dataset name (default: plantdoc)",
     )
 
-    parser.add_argument(
-        "--use-sbd",
-        action="store_true",
-        default=True,
-        help="whether to use SBD dataset (default: True)",
-    )
     parser.add_argument("--base-size", type=int, default=312, help="base image size")
     parser.add_argument("--crop-size", type=int, default=312, help="crop image size")
     parser.add_argument(
@@ -217,16 +211,16 @@ def main():
         type=int,
         default=200,
         metavar="N",
-        help="number of epochs to train (default: auto)",
+        help="number of epochs to train (default: 200)",
     )
 
     # PASCAL VOC
     parser.add_argument(
         "--batch-size",
         type=int,
-        default=16,
+        default=10,
         metavar="N",
-        help="input batch size for training (default: auto)",
+        help="input batch size for training (default: 10)",
     )
     # checking point
     parser.add_argument(
@@ -235,18 +229,17 @@ def main():
         default=None,
         help="put the path to resuming file if needed",
     )
-
     parser.add_argument(
-        "--imagenet_pretrained_path",
+        "--checkname",
         type=str,
-        default="checkpoint/resnet_backbone_pretrained_imagenet_wo_pascalvoc.pth.tar",
+        default="context_1_unseen",
         help="set the checkpoint name",
     )
 
     parser.add_argument(
-        "--checkname",
+        "--imagenet_pretrained_path",
         type=str,
-        default="pascal_2_unseen",
+        default="checkpoint/resnet_backbone_pretrained_imagenet_wo_pascalcontext.pth.tar",
         help="set the checkpoint name",
     )
 
@@ -254,18 +247,26 @@ def main():
     parser.add_argument(
         "--eval-interval", type=int, default=10, help="evaluation interval (default: 1)"
     )
-    # only seen classes
-    # 10 unseen
-    # parser.add_argument('--unseen_classes_idx', type=int, default=[10, 14, 1, 18, 8, 20, 19, 5, 9, 16])
-    # 8 unseen
-    # parser.add_argument('--unseen_classes_idx', type=int, default=[10, 14, 1, 18, 8, 20, 19, 5])
-    # 6 unseen
-    # parser.add_argument('--unseen_classes_idx', type=int, default=[10, 14, 1, 18, 8, 20])
-    # 4 unseen
-    # parser.add_argument('--unseen_classes_idx', type=int, default=[10, 14, 1, 18])
-    # 2 unseen
-    parser.add_argument("--unseen_classes_idx", type=int, default=[10, 14])
 
+    # 1 unseen
+    unseen_names = ["diseased plant area"] # et une vue : "healthy plant area"
+    # 2 unseen
+    #unseen_names = ["cow", "motorbike"]
+    # 4 unseen
+    # unseen_names = ['cow', 'motorbike', 'sofa', 'cat']
+    # 6 unseen
+    # unseen_names = ['cow', 'motorbike', 'sofa', 'cat', 'boat', 'fence']
+    # 8 unseen
+    # unseen_names = ['cow', 'motorbike', 'sofa', 'cat', 'boat', 'fence', 'bird', 'tvmonitor']
+    # 10 unseen
+    # unseen_names = ['cow', 'motorbike', 'sofa', 'cat', 'boat', 'fence', 'bird', 'tvmonitor', 'aeroplane', 'keyboard']
+
+    unseen_classes_idx = []
+    for name in unseen_names:
+        unseen_classes_idx.append(CLASSES_NAMES_PLANTDOC.index(name))
+    print(unseen_classes_idx)
+    # all classes
+    parser.add_argument("--unseen_classes_idx", type=int, default=unseen_classes_idx)
     args = parser.parse_args()
     args.cuda = not args.no_cuda
     # if args.cuda:
@@ -284,6 +285,8 @@ def main():
             "coco": 30,
             "cityscapes": 200,
             "pascal": 50,
+            "pascal": 150,
+            "plantdoc": 100,
         }
         args.epochs = epoches[args.dataset.lower()]
 
@@ -298,6 +301,7 @@ def main():
             "coco": 0.1,
             "cityscapes": 0.01,
             "pascal": 0.007,
+            "plantdoc": 0.01,
         }
         args.lr = lrs[args.dataset.lower()] / (4 * len(args.gpu_ids)) * args.batch_size
 

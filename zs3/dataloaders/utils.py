@@ -28,6 +28,9 @@ def decode_segmap(label_mask, dataset, plot=False):
     elif dataset == "context":
         n_classes = 60
         label_colours = make_palette(n_classes)
+    elif dataset == "plantdoc":
+        n_classes = 3
+        label_colours = make_palette(n_classes)
     else:
         raise NotImplementedError
 

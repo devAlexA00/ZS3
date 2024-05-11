@@ -69,7 +69,7 @@ class Trainer:
         class_weight = torch.ones(self.nclass)
         class_weight[args.unseen_classes_idx_metric] = args.unseen_weight
         if args.cuda:
-            class_weight = class_weight.cuda()
+            class_weight = class_weight.to(torch.device("mps"))
 
         self.criterion = SegmentationLosses(
             weight=class_weight, cuda=args.cuda
@@ -95,8 +95,8 @@ class Trainer:
         if args.cuda:
             self.model = torch.nn.DataParallel(self.model, device_ids=self.args.gpu_ids)
             patch_replication_callback(self.model)
-            self.model = self.model.cuda()
-            self.generator = self.generator.cuda()
+            self.model = self.model.to(torch.device("mps"))
+            self.generator = self.generator.to(torch.device("mps"))
 
         # Resuming checkpoint
         self.best_pred = 0.0
@@ -145,9 +145,9 @@ class Trainer:
                 )
                 if self.args.cuda:
                     image, target, embedding = (
-                        image.cuda(),
-                        target.cuda(),
-                        embedding.cuda(),
+                        image.to(torch.device("mps")),
+                        target.to(torch.device("mps")),
+                        embedding.to(torch.device("mps")),
                     )
                 self.scheduler(self.optimizer, i, epoch, self.best_pred)
                 # ===================real feature extraction=====================
@@ -159,7 +159,7 @@ class Trainer:
                 # ===================fake feature generation=====================
                 fake_features = torch.zeros(real_features.shape)
                 if args.cuda:
-                    fake_features = fake_features.cuda()
+                    fake_features = fake_features.to(torch.device("mps"))
                 generator_loss_batch = 0.0
                 for (
                     count_sample_i,
@@ -196,7 +196,7 @@ class Trainer:
 
                     fake_features_i = torch.zeros(real_features_i.shape)
                     if args.cuda:
-                        fake_features_i = fake_features_i.cuda()
+                        fake_features_i = fake_features_i.to(torch.device("mps"))
 
                     unique_class = torch.unique(target_i)
 
@@ -215,7 +215,7 @@ class Trainer:
 
                             z = torch.rand((embedding_class.shape[0], args.noise_dim))
                             if args.cuda:
-                                z = z.cuda()
+                                z = z.to(torch.device("mps"))
 
                             fake_features_class = self.generator(
                                 embedding_class, z.float()
@@ -354,7 +354,7 @@ class Trainer:
                 sample["label_emb"],
             )
             if self.args.cuda:
-                image, target = image.cuda(), target.cuda()
+                image, target = image.to(torch.device("mps")), target.to(torch.device("mps"))
             with torch.no_grad():
                 output = self.model(image)
             loss = self.criterion(output, target)
@@ -608,14 +608,14 @@ def main():
     parser.add_argument("--saved_validation_images", type=int, default=10)
 
     args = parser.parse_args()
-    args.cuda = not args.no_cuda and torch.cuda.is_available()
-    if args.cuda:
-        try:
-            args.gpu_ids = [int(s) for s in args.gpu_ids.split(",")]
-        except ValueError:
-            raise ValueError(
-                "Argument --gpu_ids must be a comma-separated list of integers only"
-            )
+    args.cuda = not args.no_cuda
+    # if args.cuda:
+    #     try:
+    #         args.gpu_ids = [int(s) for s in args.gpu_ids.split(",")]
+    #     except ValueError:
+    #         raise ValueError(
+    #             "Argument --gpu_ids must be a comma-separated list of integers only"
+    #         )
 
     args.sync_bn = args.cuda and len(args.gpu_ids) > 1
 

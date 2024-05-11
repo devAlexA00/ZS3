@@ -2,7 +2,7 @@ import torch
 
 
 class GMMNLoss:
-    def __init__(self, sigma=[2, 5, 10, 20, 40, 80], cuda=False):
+    def __init__(self, sigma=[2, 5, 10, 20, 40, 80], cuda=True):
         self.sigma = sigma
         self.cuda = cuda
 
@@ -13,7 +13,7 @@ class GMMNLoss:
         s1 = torch.ones((N, 1)) * 1.0 / N
         s2 = torch.ones((M, 1)) * -1.0 / M
         if self.cuda:
-            s1, s2 = s1.cuda(), s2.cuda()
+            s1, s2 = s1.to(torch.device("mps")), s2.to(torch.device("mps"))
         return torch.cat((s1, s2), 0)
 
     def moment_loss(self, gen_samples, x):
