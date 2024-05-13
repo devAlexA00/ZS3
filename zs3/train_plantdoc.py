@@ -38,7 +38,7 @@ class Trainer(BaseTrainer):
 
         # Define network
         model = DeepLab(
-            num_classes=self.nclass,
+            num_classes=self.nclass - len(args.unseen_classes_idx),
             output_stride=args.out_stride,
             sync_bn=args.sync_bn,
             freeze_bn=args.freeze_bn,
@@ -80,7 +80,7 @@ class Trainer(BaseTrainer):
         self.model, self.optimizer = model, optimizer
 
         # Define Evaluator
-        self.evaluator = Evaluator(self.nclass, [x for x in range(self.nclass) if x != args.unseen_classes_idx], [args.unseen_classes_idx])
+        self.evaluator = Evaluator(self.nclass, [idx for idx in list(range(self.nclass)) if idx not in args.unseen_classes_idx], args.unseen_classes_idx)
         # Define lr scheduler
         self.scheduler = LR_Scheduler(
             args.lr_scheduler, args.lr, args.epochs, len(self.train_loader)
@@ -89,9 +89,9 @@ class Trainer(BaseTrainer):
         # Using cuda
         #print("CUDA =", args.cuda)
         if args.cuda:
+            self.model = self.model.to(torch.device("mps"))
             self.model = torch.nn.DataParallel(self.model, device_ids=self.args.gpu_ids)
             patch_replication_callback(self.model)
-            self.model = self.model.to(torch.device("mps"))
 
         # Resuming checkpoint
         self.best_pred = 0.0
@@ -115,6 +115,8 @@ class Trainer(BaseTrainer):
 
     def validation(self, epoch):
         self.model.eval()
+        if self.args.cuda:
+            self.model = self.model.to(torch.device("mps"))
         self.evaluator.reset()
         tbar = tqdm(self.val_loader, desc="\r")
         test_loss = 0.0
@@ -134,10 +136,10 @@ class Trainer(BaseTrainer):
             self.evaluator.add_batch(target, pred)
 
         # Fast test during the training
-        Acc = self.evaluator.Pixel_Accuracy()
-        Acc_class, Acc_class_by_class = self.evaluator.Pixel_Accuracy_Class()
-        mIoU, mIoU_by_class = self.evaluator.Mean_Intersection_over_Union()
-        FWIoU = self.evaluator.Frequency_Weighted_Intersection_over_Union()
+        Acc, _, _ = self.evaluator.Pixel_Accuracy()
+        Acc_class, Acc_class_by_class, _, _ = self.evaluator.Pixel_Accuracy_Class() # Pb de calcul ici
+        mIoU, mIoU_by_class, _, _ = self.evaluator.Mean_Intersection_over_Union() # Pb de calcul ici
+        FWIoU, _, _ = self.evaluator.Frequency_Weighted_Intersection_over_Union()
         self.writer.add_scalar("val/total_loss_epoch", test_loss, epoch)
         self.writer.add_scalar("val/mIoU", mIoU, epoch)
         self.writer.add_scalar("val/Acc", Acc, epoch)
@@ -249,7 +251,7 @@ def main():
     )
 
     # 1 unseen
-    unseen_names = ["diseased plant area"] # et une vue : "healthy plant area"
+    unseen_names = ["healthy plant area"] # et une vue : "diseased plant area"
     # 2 unseen
     #unseen_names = ["cow", "motorbike"]
     # 4 unseen
@@ -264,7 +266,7 @@ def main():
     unseen_classes_idx = []
     for name in unseen_names:
         unseen_classes_idx.append(CLASSES_NAMES_PLANTDOC.index(name))
-    print(unseen_classes_idx)
+    print("Classes non vues :", unseen_classes_idx)
     # all classes
     parser.add_argument("--unseen_classes_idx", type=int, default=unseen_classes_idx)
     args = parser.parse_args()

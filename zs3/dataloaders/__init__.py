@@ -79,7 +79,7 @@ def make_data_loader(
             weak_label=weak_label,
             unseen_classes_idx_weak=unseen_classes_idx_weak,
         )
-        val_set = context.ContextSegmentation(
+        val_set = plantdoc.PlantDocSegmentation(
             args, split="val", load_embedding=load_embedding, w2c_size=w2c_size
         )
         num_class = train_set.NUM_CLASSES

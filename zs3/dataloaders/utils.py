@@ -30,7 +30,7 @@ def decode_segmap(label_mask, dataset, plot=False):
         label_colours = make_palette(n_classes)
     elif dataset == "plantdoc":
         n_classes = 3
-        label_colours = make_palette(n_classes)
+        label_colours = get_plantdoc_labels()
     else:
         raise NotImplementedError
 
@@ -80,6 +80,19 @@ def get_pascal_labels():
             [0, 192, 0],
             [128, 192, 0],
             [0, 64, 128],
+        ]
+    )
+
+def get_plantdoc_labels():
+    """Load the mapping that associates plantdoc classes with label colors
+    Returns:
+        np.ndarray with dimensions (3, 3)
+    """
+    return np.asarray(
+        [
+            [0, 0, 0], # background
+            [38, 38, 38], # Vérifié dans test_color_mask.py
+            [128, 128, 128], # classe non vue
         ]
     )
 

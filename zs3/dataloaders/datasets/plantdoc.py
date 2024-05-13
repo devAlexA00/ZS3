@@ -29,7 +29,7 @@ class PlantDocSegmentation(BaseDataset):
         load_embedding=None,
         w2c_size=300,
         weak_label=False,
-        unseen_classes_idx_weak=1,
+        unseen_classes_idx_weak=2,
         transform=True,
     ):
         """

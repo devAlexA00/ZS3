@@ -75,6 +75,18 @@ class SegmentationLosses:
             logpt *= alpha
         loss = -((1 - pt) ** gamma) * logpt
 
+        #predicted_classes = torch.argmax(logit, dim=1)
+        #print("Predicted classes: ", predicted_classes)
+        #print("CrossEntropy loss: ", criterion(logit, target.long()))
+        #print("logit: ", logit)
+        #print("Alpha: ", alpha)
+        #rint("Gamma: ", gamma)
+        #print("Logpt: ", logpt.item())
+        #print("Pt: ", pt.item())
+        #print("Loss: ", loss.item())
+        #print("Loss2 :", loss)
+        #print("Target: ", target.long().item())
+
         if self.batch_average:
             loss /= n
 

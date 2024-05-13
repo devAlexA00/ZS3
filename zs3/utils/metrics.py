@@ -9,7 +9,11 @@ class Evaluator:
         self.confusion_matrix = np.zeros((self.num_class,) * 2)
 
     def Pixel_Accuracy(self):
-        Acc = np.diag(self.confusion_matrix).sum() / self.confusion_matrix.sum()
+        total_predictions = self.confusion_matrix.sum()
+        if total_predictions == 0:
+            Acc = 0
+        else:
+            Acc = np.diag(self.confusion_matrix).sum() / total_predictions
         if self.seen_classes_idx and self.unseen_classes_idx:
             Acc_seen = (
                 np.diag(self.confusion_matrix)[self.seen_classes_idx].sum()
@@ -24,8 +28,11 @@ class Evaluator:
             return Acc
 
     def Pixel_Accuracy_Class(self):
-        Acc_by_class = np.diag(self.confusion_matrix) / self.confusion_matrix.sum(axis=1)
+        total_predictions_by_class = self.confusion_matrix.sum(axis=1)
+        Acc_by_class = np.where(total_predictions_by_class == 0, 0, np.diag(self.confusion_matrix) / total_predictions_by_class)
+        #print("type(Acc_by_class) =", type(Acc_by_class))
         Acc = np.nanmean(np.nan_to_num(Acc_by_class))
+        #print("type(Acc) =", type(Acc))
         if self.seen_classes_idx and self.unseen_classes_idx:
             Acc_seen = np.nanmean(np.nan_to_num(Acc_by_class[self.seen_classes_idx]))
             Acc_unseen = np.nanmean(np.nan_to_num(Acc_by_class[self.unseen_classes_idx]))
@@ -34,12 +41,17 @@ class Evaluator:
             return Acc, Acc_by_class
 
     def Mean_Intersection_over_Union(self):
-        MIoU_by_class = np.diag(self.confusion_matrix) / (
+        denominator = (
             np.sum(self.confusion_matrix, axis=1)
             + np.sum(self.confusion_matrix, axis=0)
             - np.diag(self.confusion_matrix)
         )
+        denominator = np.where(denominator == 0, 1, denominator)
+
+        MIoU_by_class = np.diag(self.confusion_matrix) / denominator
+        #print("type(MIoU_by_class) =", type(MIoU_by_class))
         MIoU = np.nanmean(np.nan_to_num(MIoU_by_class))
+        #print("type(MIoU) =", type(MIoU))
         if self.seen_classes_idx and self.unseen_classes_idx:
             MIoU_seen = np.nanmean(np.nan_to_num(MIoU_by_class[self.seen_classes_idx]))
             MIoU_unseen = np.nanmean(
@@ -50,13 +62,22 @@ class Evaluator:
             return MIoU, MIoU_by_class
 
     def Frequency_Weighted_Intersection_over_Union(self):
-        freq = np.sum(self.confusion_matrix, axis=1) / np.sum(self.confusion_matrix)
-        iu = np.diag(self.confusion_matrix) / (
+        total = np.sum(self.confusion_matrix)
+        total = np.where(total == 0, 1, total)
+
+        freq = np.sum(self.confusion_matrix, axis=1) / total
+
+        denominator = (
             np.sum(self.confusion_matrix, axis=1)
             + np.sum(self.confusion_matrix, axis=0)
             - np.diag(self.confusion_matrix)
         )
+        denominator = np.where(denominator == 0, 1, denominator)
+
+        iu = np.diag(self.confusion_matrix) / denominator
+
         FWIoU = (freq[freq > 0] * iu[freq > 0]).sum()
+        #print("type(FWIoU) =", type(FWIoU))
         if self.seen_classes_idx and self.unseen_classes_idx:
             FWIoU_seen = (
                 freq[self.seen_classes_idx][freq[self.seen_classes_idx] > 0]
