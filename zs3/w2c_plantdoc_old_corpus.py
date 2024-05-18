@@ -1,6 +1,7 @@
 from gensim.models import Word2Vec
 import numpy as np
 
+# Premier essai de corpus pour l'entraînement du modèle Word2Vec raté
 corpus = [["background", "is", "everything", "that", "is", "not", "the", "plant"],
           ["diseased", "plant", "area", "shows", "signs", "of", "disease"],
           ["healthy", "plant", "area", "is", "green", "and", "vibrant"]]

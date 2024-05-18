@@ -86,7 +86,7 @@ class Trainer(BaseTrainer):
             args.lr_scheduler, args.lr, args.epochs, len(self.train_loader)
         )
 
-        # Using cuda
+        # Using cuda (remplacé par torch.device("mps") pour utiliser MPS et se sera le cas pour tout appel à cuda)
         #print("CUDA =", args.cuda)
         if args.cuda:
             self.model = self.model.to(torch.device("mps"))
@@ -115,6 +115,7 @@ class Trainer(BaseTrainer):
 
     def validation(self, epoch):
         self.model.eval()
+        # Appel à MPS
         if self.args.cuda:
             self.model = self.model.to(torch.device("mps"))
         self.evaluator.reset()
@@ -122,6 +123,7 @@ class Trainer(BaseTrainer):
         test_loss = 0.0
         for i, sample in enumerate(tbar):
             image, target = sample["image"], sample["label"]
+            # Appel à MPS
             if self.args.cuda:
                 image, target = image.to(torch.device("mps")), target.to(torch.device("mps"))
             with torch.no_grad():
@@ -137,8 +139,8 @@ class Trainer(BaseTrainer):
 
         # Fast test during the training
         Acc, _, _ = self.evaluator.Pixel_Accuracy()
-        Acc_class, Acc_class_by_class, _, _ = self.evaluator.Pixel_Accuracy_Class() # Pb de calcul ici
-        mIoU, mIoU_by_class, _, _ = self.evaluator.Mean_Intersection_over_Union() # Pb de calcul ici
+        Acc_class, Acc_class_by_class, _, _ = self.evaluator.Pixel_Accuracy_Class() # Pb de calcul ici lors de la validation dans l'entraînement
+        mIoU, mIoU_by_class, _, _ = self.evaluator.Mean_Intersection_over_Union() # IDEM
         FWIoU, _, _ = self.evaluator.Frequency_Weighted_Intersection_over_Union()
         self.writer.add_scalar("val/total_loss_epoch", test_loss, epoch)
         self.writer.add_scalar("val/mIoU", mIoU, epoch)
@@ -187,7 +189,7 @@ def main():
         "--out-stride", type=int, default=16, help="network output stride (default: 8)"
     )
 
-    # PASCAL VOC
+    # PLANTDOC
     parser.add_argument(
         "--dataset",
         type=str,
@@ -207,7 +209,6 @@ def main():
     )
     # training hyper params
 
-    # PASCAL VOC
     parser.add_argument(
         "--epochs",
         type=int,
@@ -216,7 +217,6 @@ def main():
         help="number of epochs to train (default: 200)",
     )
 
-    # PASCAL VOC
     parser.add_argument(
         "--batch-size",
         type=int,
@@ -252,6 +252,9 @@ def main():
 
     # 1 unseen
     unseen_names = ["healthy plant area"] # et une vue : "diseased plant area"
+    # On choisit que la classe vue est "diseased plant area" et la classe non vue est "healthy plant area"
+    # car nous avons les masques pour la classe "diseased plant area". Le modèle foit apprendre à distinguer cette classe
+    # et la classe "background", puis généraliser à la classe "healthy plant area".
     # 2 unseen
     #unseen_names = ["cow", "motorbike"]
     # 4 unseen

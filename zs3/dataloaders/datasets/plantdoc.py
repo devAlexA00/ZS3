@@ -10,7 +10,7 @@ from torchvision import transforms
 from zs3.dataloaders import custom_transforms as tr
 from .base import BaseDataset, lbl_contains_unseen
 
-
+# Répertoire des données PlantDoc
 PLANTDOC_DIR = pathlib.Path("./data/plantdoc/")
 
 
@@ -47,9 +47,10 @@ class PlantDocSegmentation(BaseDataset):
             unseen_classes_idx_weak,
             transform,
         )
-
+        # Répertoire des images
         self._image_dir = self._base_dir / "train/images"
         #print("PATH :", self._image_dir)
+        # Répertoire des masques
         self._cat_dir = self._base_dir / "train/masks"
 
         self.unseen_classes_idx_weak = unseen_classes_idx_weak
@@ -61,6 +62,7 @@ class PlantDocSegmentation(BaseDataset):
 
         lines = (_splits_dir / f"{self.split}.txt").read_text().splitlines()
 
+        # Récupérer les images et les masques
         for ii, line in enumerate(lines):
             _image = self._image_dir / f"{line}.jpg"
             _cat = self._cat_dir / f"{line}.png"
@@ -83,6 +85,7 @@ class PlantDocSegmentation(BaseDataset):
         # Display stats
         print(f"(pascal) Number of images in {split}: {len(self.images):d}")
 
+    # Pour les embeddings
     def init_embeddings(self):
         if self.load_embedding == "my_w2c":
             embed_arr = np.load("/Users/alex/Documents/GitHub/ZS3/zs3/embeddings/plantdoc/plantdoc_class_w2c.npy")

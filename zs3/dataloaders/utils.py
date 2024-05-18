@@ -28,6 +28,7 @@ def decode_segmap(label_mask, dataset, plot=False):
     elif dataset == "context":
         n_classes = 60
         label_colours = make_palette(n_classes)
+    # Ajout du cas plantdoc
     elif dataset == "plantdoc":
         n_classes = 3
         label_colours = get_plantdoc_labels()
@@ -83,6 +84,7 @@ def get_pascal_labels():
         ]
     )
 
+# Ajout du cas plantdoc
 def get_plantdoc_labels():
     """Load the mapping that associates plantdoc classes with label colors
     Returns:

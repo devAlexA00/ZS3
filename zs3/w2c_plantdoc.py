@@ -2,6 +2,8 @@ from gensim.models import Word2Vec
 import numpy as np
 
 # 1 classe non vue : "diseased plant area" non intégré dans le corpus
+# Ce corpus est utilisé pour l'entraînement du modèle Word2Vec
+# Les mots utilisés sont sensés être des mots-clés pour les classes "background" et "diseased plant area" pour un embedding
 corpus = [
     # background
     ["background", "is", "everything", "that", "is", "not", "the", "plant"],
@@ -55,7 +57,9 @@ corpus = [
     ["negligent", "monitoring", "and", "maintenance", "late", "detection", "of", "issues"]
 ]
 
+# Entraîner le modèle Word2Vec
 model = Word2Vec(corpus, vector_size=300, window=5, min_count=1, workers=4)
 embeddings = {word: model.wv[word] for word in model.wv.key_to_index}
 
+# Sauvegarder les embeddings
 np.save('/Users/alex/Documents/GitHub/ZS3/zs3/embeddings/plantdoc/plantdoc_class_w2c.npy', embeddings)

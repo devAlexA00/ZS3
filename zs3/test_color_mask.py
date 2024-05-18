@@ -18,11 +18,14 @@ import os
 
 # print(unique_colors)
 
+# Transforme l'image en noir et gris (2 couleurs pas plus)
+# Permet de retirer les dégradés de gris dans les masques pour plantdoc
 def binarize_image(img_np, threshold=19):
     img_np[img_np < threshold] = 0
     img_np[img_np >= threshold] = 38
     return img_np
 
+# Binarize toutes les images en niveaux de gris dans un répertoire
 def binarize_images_in_directory(directory):
     for filename in os.listdir(directory):
         if filename.endswith(".png"): 
@@ -33,6 +36,7 @@ def binarize_images_in_directory(directory):
             img_bin = Image.fromarray(img_np)
             img_bin.save(filepath)
 
+# Répertoires des masques de PlantDoc à binariser
 binarize_images_in_directory('/Users/alex/Documents/GitHub/ZS3/data/plantdoc/train/masks')
 binarize_images_in_directory('/Users/alex/Documents/GitHub/ZS3/data/plantdoc/test/masks')
 
@@ -54,5 +58,7 @@ def get_color_percentage(directory):
                 print("Color:", color, "Percentage:", np.count_nonzero(img_np == color) / img_np.size * 100)
             print()
 
+# Répertoires des masques de PlantDoc à analyser
+# Cela permet de voir si les masques sont binarisés correctement et si les classes sont bien réparties
+# Ce n'est pas le cas pour les masques de PlantDoc (mal répartis)
 get_color_percentage('/Users/alex/Documents/GitHub/ZS3/data/plantdoc/train/masks')
-

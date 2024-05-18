@@ -1,6 +1,6 @@
 import torch
 
-# Check that MPS is available
+# Vérifier si MPS est disponible sur la machine
 if not torch.backends.mps.is_available():
     if not torch.backends.mps.is_built():
         print("MPS not available because the current PyTorch install was not "
