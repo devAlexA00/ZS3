@@ -1,6 +1,6 @@
 # TER sur le Zero-Shot Semantic Segmentation - ZS3Net sur Plantdoc
 
-Ce travail reprends le code du projet ZS3 sur le modèle ZS3Net de Valeo. Le but est d'utiliser le modèle sur un jeu de données personnalisé nommé plantdoc.
+Ce travail d'études et de recherches reprends le code du projet ZS3 sur le modèle ZS3Net de Valeo. Il est effectué dans le cadre d'un M1 d'informatique parcours Intelligence Artificielle. Le but est d'utiliser le modèle ZS3Net sur un jeu de données personnalisé nommé plantdoc.
 
 ## Plantdoc
 
